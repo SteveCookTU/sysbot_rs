@@ -5,6 +5,7 @@ mod poke_data;
 mod seq_param;
 mod stick;
 mod stick_movement;
+pub mod thread_message;
 
 pub use button::*;
 pub use peek_args::*;
