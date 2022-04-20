@@ -26,17 +26,21 @@ impl SysBotClient {
                 TcpStream::connect(socket_addr).expect("Failed to connect to address");
             let sender_out = sender_out;
             for message in receiver_in.iter() {
-                let _ = tcp_stream
-                    .write(message.as_bytes())
-                    .expect("Failed to write to stream");
-                tcp_stream.flush().expect("Failed to flush stream");
-                let mut buf = [0u8; 10000];
-                let size = tcp_stream
-                    .read(&mut buf)
-                    .expect("Failed to read from stream");
-                sender_out
-                    .send((&buf[..size]).to_vec())
-                    .expect("Failed to send response over channel");
+                if message.eq("close") {
+                    break;
+                } else {
+                    let _ = tcp_stream
+                        .write(message.as_bytes())
+                        .expect("Failed to write to stream");
+                    tcp_stream.flush().expect("Failed to flush stream");
+                    let mut buf = [0u8; 10000];
+                    let size = tcp_stream
+                        .read(&mut buf)
+                        .expect("Failed to read from stream");
+                    sender_out
+                        .send((&buf[..size]).to_vec())
+                        .expect("Failed to send response over channel");
+                }
             }
             println!("Test");
         }));
@@ -46,6 +50,12 @@ impl SysBotClient {
             receiver: receiver_out,
             worker,
         })
+    }
+
+    pub fn close(self) {
+        let worker = self.worker.expect("Worker was never created");
+        self.sender.send("exit".to_string()).expect("Failed to send exit message");
+        worker.join().expect("Failed to join worker")
     }
 
     fn receive(&self) -> Result<Vec<u8>, &'static str> {
