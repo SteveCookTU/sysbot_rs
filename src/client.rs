@@ -52,12 +52,11 @@ impl SysBotClient {
         })
     }
 
-    pub fn consume(self) {
+    pub fn exit(&self) {
         self.sender.send("consume".to_string()).expect("Failed to send exit message");
-        self.close();
     }
 
-    fn close(self) {
+    pub fn consume(self) {
         let worker = self.worker.expect("Worker was never created");
         worker.join().expect("Failed to join worker");
     }
