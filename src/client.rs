@@ -8,6 +8,12 @@ use std::sync::mpsc::{Receiver, Sender, SyncSender};
 use std::thread;
 use std::thread::JoinHandle;
 
+/// A client that sends and receives data from a sys-botbase server
+///
+/// The client is created and established with [`connect`] and will be all messages will be sent
+/// and cleaned up when the client is dropped
+///
+/// [`connect`]: fn@crate::SysBotClient::connect
 pub struct SysBotClient {
     sender: SyncSender<ThreadMessage>,
     receiver: Receiver<Vec<u8>>,
@@ -15,6 +21,26 @@ pub struct SysBotClient {
 }
 
 impl SysBotClient {
+    /// Creates and connects a SysBotClient to a TcpStream in a concurrent thread.
+    ///
+    /// # Arguments
+    ///
+    /// * `addr` - A string slice representing an IPv4 address
+    /// * `port` - A port number for the specified address
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use sysbot_rs::SysBotClient;
+    /// match SysBotClient::connect("0.0.0.0", 6000) {
+    ///     Ok(client) => {
+    ///         // Do something with the client
+    ///     }
+    ///     Err(err) => {
+    ///         panic!("{}", err);
+    ///     }
+    /// }
+    /// ```
     pub fn connect(addr: &str, port: u16) -> Result<Self, &'static str> {
         let socket_addr = SocketAddr::new(
             IpAddr::V4(Ipv4Addr::from_str(addr).map_err(|_| "Failed to convert ip address")?),
@@ -56,13 +82,6 @@ impl SysBotClient {
             receiver: receiver_out,
             worker,
         })
-    }
-
-    pub fn consume(self) {
-        self.send("".to_string(), false, true)
-            .expect("Failed to send closing message");
-        let worker = self.worker.expect("Worker was never created");
-        worker.join().expect("Failed to join worker");
     }
 
     fn receive(&self) -> Result<Vec<u8>, &'static str> {
@@ -223,5 +242,13 @@ impl SysBotClient {
         let command = "detachController".to_string();
         self.send(command, false, false)?;
         Ok(())
+    }
+}
+
+impl Drop for SysBotClient {
+    fn drop(&mut self) {
+        self.send("".to_string(), false, true)
+            .expect("Failed to send closing message");
+        self.worker.take().unwrap().join().unwrap();
     }
 }
