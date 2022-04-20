@@ -26,8 +26,9 @@ impl SysBotClient {
                 TcpStream::connect(socket_addr).expect("Failed to connect to address");
             let sender_out = sender_out;
             for message in receiver_in.iter() {
-                if message.eq("close") {
-                    break;
+                if message == "consume" {
+                    println!("Ending the worker");
+                    return;
                 } else {
                     let _ = tcp_stream
                         .write(message.as_bytes())
@@ -42,7 +43,6 @@ impl SysBotClient {
                         .expect("Failed to send response over channel");
                 }
             }
-            println!("Test");
         }));
 
         Ok(Self {
@@ -54,7 +54,7 @@ impl SysBotClient {
 
     pub fn consume(self) {
         let worker = self.worker.expect("Worker was never created");
-        self.sender.send("close".to_string()).expect("Failed to send exit message");
+        self.sender.send("consume".to_string()).expect("Failed to send exit message");
         worker.join().expect("Failed to join worker")
     }
 
