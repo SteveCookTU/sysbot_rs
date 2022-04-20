@@ -19,11 +19,12 @@ impl SysBotClient {
             IpAddr::V4(Ipv4Addr::from_str(addr).map_err(|_| "Failed to convert ip address")?),
             port,
         );
+        let tcp_stream =
+            TcpStream::connect(socket_addr).map_err(|_| "Failed to connect to tcp stream")?;
         let (sender_in, receiver_in): (Sender<String>, Receiver<String>) = mpsc::channel();
         let (sender_out, receiver_out): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = mpsc::channel();
         let worker = Some(thread::spawn(move || {
-            let mut tcp_stream =
-                TcpStream::connect(socket_addr).expect("Failed to connect to address");
+            let mut tcp_stream = tcp_stream;
             let sender_out = sender_out;
             for message in receiver_in.iter() {
                 let _ = tcp_stream
