@@ -38,6 +38,7 @@ impl SysBotClient {
                     .send((&buf[..size]).to_vec())
                     .expect("Failed to send response over channel");
             }
+            println!("Test");
         }));
 
         Ok(Self {
