@@ -54,7 +54,7 @@ impl SysBotClient {
 
     pub fn close(self) {
         let worker = self.worker.expect("Worker was never created");
-        self.sender.send("exit".to_string()).expect("Failed to send exit message");
+        self.sender.send("close".to_string()).expect("Failed to send exit message");
         worker.join().expect("Failed to join worker")
     }
 
