@@ -53,9 +53,13 @@ impl SysBotClient {
     }
 
     pub fn consume(self) {
-        let worker = self.worker.expect("Worker was never created");
         self.sender.send("consume".to_string()).expect("Failed to send exit message");
-        worker.join().expect("Failed to join worker")
+        self.close();
+    }
+
+    fn close(self) {
+        let worker = self.worker.expect("Worker was never created");
+        worker.join().expect("Failed to join worker");
     }
 
     fn receive(&self) -> Result<Vec<u8>, &'static str> {
