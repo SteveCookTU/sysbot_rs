@@ -26,8 +26,8 @@ impl SysBotClient {
                 TcpStream::connect(socket_addr).expect("Failed to connect to address");
             let sender_out = sender_out;
             for message in receiver_in.iter() {
-                if message == "consume" {
-                    println!("Ending the worker");
+                println!("{}", message);
+                if message == "consume".to_string() {
                     return;
                 } else {
                     let _ = tcp_stream
