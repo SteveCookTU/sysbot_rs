@@ -1,5 +1,7 @@
 use crate::types::thread_message::ThreadMessage;
-use crate::types::{Button, PeekArgs, PokeArgs, SeqParam, Stick, StickMovement};
+use crate::types::{
+    Button, ConfigureOption, PeekArgs, PokeArgs, PokeData, SeqParam, Stick, StickMovement,
+};
 use std::io::{Read, Write};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream};
 use std::str::FromStr;
@@ -168,29 +170,25 @@ impl SysBotClient {
     pub fn poke(&self, args: PokeArgs) -> Result<(), &'static str> {
         self.check_connected()?;
         let command = format!("poke 0x{:X} {}", args.addr, args.data.to_string());
-        self.send(command, false, false)?;
-        Ok(())
+        self.send(command, false, false)
     }
 
     pub fn poke_absolute(&self, args: PokeArgs) -> Result<(), &'static str> {
         self.check_connected()?;
         let command = format!("pokeAbsolute 0x{:X} {}", args.addr, args.data.to_string());
-        self.send(command, false, false)?;
-        Ok(())
+        self.send(command, false, false)
     }
 
     pub fn poke_main(&self, args: PokeArgs) -> Result<(), &'static str> {
         self.check_connected()?;
         let command = format!("pokeMain 0x{:X} {}", args.addr, args.data.to_string());
-        self.send(command, false, false)?;
-        Ok(())
+        self.send(command, false, false)
     }
 
     pub fn click(&self, button: Button) -> Result<(), &'static str> {
         self.check_connected()?;
         let command = format!("click {}", button);
-        self.send(command, false, false)?;
-        Ok(())
+        self.send(command, false, false)
     }
 
     pub fn click_seq(&self, args: Vec<SeqParam>) -> Result<(), &'static str> {
@@ -201,29 +199,25 @@ impl SysBotClient {
             .collect::<Vec<String>>()
             .join(",");
         let command = format!("clickSeq {}", args);
-        self.send(command, false, false)?;
-        Ok(())
+        self.send(command, false, false)
     }
 
     pub fn click_cancel(&self) -> Result<(), &'static str> {
         self.check_connected()?;
         let command = "clickCancel".to_string();
-        self.send(command, false, false)?;
-        Ok(())
+        self.send(command, false, false)
     }
 
     pub fn press(&self, button: Button) -> Result<(), &'static str> {
         self.check_connected()?;
         let command = format!("press {}", button);
-        self.send(command, false, false)?;
-        Ok(())
+        self.send(command, false, false)
     }
 
     pub fn release(&self, button: Button) -> Result<(), &'static str> {
         self.check_connected()?;
         let command = format!("release {}", button);
-        self.send(command, false, false)?;
-        Ok(())
+        self.send(command, false, false)
     }
 
     pub fn set_stick(&self, stick: Stick, movement: StickMovement) -> Result<(), &'static str> {
@@ -233,15 +227,214 @@ impl SysBotClient {
             stick,
             movement.to_string().replace(',', " ")
         );
-        self.send(command, false, false)?;
-        Ok(())
+        self.send(command, false, false)
     }
 
     pub fn detach_controller(&self) -> Result<(), &'static str> {
         self.check_connected()?;
         let command = "detachController".to_string();
-        self.send(command, false, false)?;
-        Ok(())
+        self.send(command, false, false)
+    }
+
+    pub fn configure(&self, option: ConfigureOption) -> Result<(), &'static str> {
+        self.check_connected()?;
+        let command = format!("configure {}", option);
+        self.send(command, false, false)
+    }
+
+    pub fn get_title_id(&self) -> Result<u64, &'static str> {
+        self.check_connected()?;
+        let command = "getTitleID".to_string();
+        self.send(command, true, false)?;
+        let string_bytes = self.receive()?;
+        u64::from_str_radix(
+            String::from_utf8(string_bytes)
+                .map_err(|_| "Failed to parse response to string")?
+                .trim(),
+            16,
+        )
+        .map_err(|_| "Failed to parse input to u64")
+    }
+
+    pub fn get_system_language(&self) -> Result<i32, &'static str> {
+        self.check_connected()?;
+        let command = "getSystemLanguage".to_string();
+        self.send(command, true, false)?;
+        let string_bytes = self.receive()?;
+        i32::from_str_radix(
+            String::from_utf8(string_bytes)
+                .map_err(|_| "Failed to parse response to string")?
+                .trim(),
+            16,
+        )
+        .map_err(|_| "Failed to parse input to u64")
+    }
+
+    pub fn get_main_nso_base(&self) -> Result<u64, &'static str> {
+        self.check_connected()?;
+        let command = "getMainNsoBase".to_string();
+        self.send(command, true, false)?;
+        let string_bytes = self.receive()?;
+        u64::from_str_radix(
+            String::from_utf8(string_bytes)
+                .map_err(|_| "Failed to parse response to string")?
+                .trim(),
+            16,
+        )
+        .map_err(|_| "Failed to parse input to u64")
+    }
+
+    pub fn get_build_id(&self) -> Result<Vec<u8>, &'static str> {
+        self.check_connected()?;
+        let command = "getBuildID".to_string();
+        self.send(command, true, false)?;
+        let string_bytes = self.receive()?;
+        Ok(string_bytes
+            .chunks(2)
+            .filter_map(|chunk| {
+                if chunk.len() < 2 {
+                    None
+                } else {
+                    Some(
+                        u8::from_str_radix(String::from_utf8(chunk.to_vec()).unwrap().trim(), 16)
+                            .unwrap(),
+                    )
+                }
+            })
+            .collect::<Vec<u8>>())
+    }
+
+    pub fn get_heap_base(&self) -> Result<u64, &'static str> {
+        self.check_connected()?;
+        let command = "getHeapBase".to_string();
+        self.send(command, true, false)?;
+        let string_bytes = self.receive()?;
+        u64::from_str_radix(
+            String::from_utf8(string_bytes)
+                .map_err(|_| "Failed to parse response to string")?
+                .trim(),
+            16,
+        )
+        .map_err(|_| "Failed to parse input to u64")
+    }
+
+    pub fn is_program_running(&self) -> Result<bool, &'static str> {
+        self.check_connected()?;
+        let command = "getHeapBase".to_string();
+        self.send(command, true, false)?;
+        let string_bytes = self.receive()?;
+        Ok(string_bytes[0] != 0)
+    }
+
+    pub fn get_version(&self) -> Result<String, &'static str> {
+        self.check_connected()?;
+        let command = "getVersion".to_string();
+        self.send(command, true, false)?;
+        let string_bytes = self.receive()?;
+        Ok(String::from_utf8(string_bytes)
+            .map_err(|_| "Failed to parse response to string")?
+            .trim()
+            .to_string())
+    }
+
+    pub fn pointer(&self, jumps: &[u64]) -> Result<u64, &'static str> {
+        self.check_connected()?;
+        let mut command = "pointer".to_string();
+        for jump in jumps {
+            command = format!("{} 0x{:X}", command, jump)
+        }
+        self.send(command, true, false)?;
+        let string_bytes = self.receive()?;
+        u64::from_str_radix(
+            String::from_utf8(string_bytes)
+                .map_err(|_| "Failed to parse response to string")?
+                .trim(),
+            16,
+        )
+        .map_err(|_| "Failed to parse input to u64")
+    }
+
+    pub fn pointer_all(&self, jumps: &[u64]) -> Result<u64, &'static str> {
+        self.check_connected()?;
+        let mut command = "pointerAll".to_string();
+        for jump in jumps {
+            command = format!("{} 0x{:X}", command, jump)
+        }
+        self.send(command, true, false)?;
+        let string_bytes = self.receive()?;
+        u64::from_str_radix(
+            String::from_utf8(string_bytes)
+                .map_err(|_| "Failed to parse response to string")?
+                .trim(),
+            16,
+        )
+        .map_err(|_| "Failed to parse input to u64")
+    }
+
+    pub fn pointer_relative(&self, jumps: &[u64]) -> Result<u64, &'static str> {
+        self.check_connected()?;
+        let mut command = "pointerAll".to_string();
+        for jump in jumps {
+            command = format!("{} 0x{:X}", command, jump)
+        }
+        self.send(command, true, false)?;
+        let string_bytes = self.receive()?;
+        u64::from_str_radix(
+            String::from_utf8(string_bytes)
+                .map_err(|_| "Failed to parse response to string")?
+                .trim(),
+            16,
+        )
+        .map_err(|_| "Failed to parse input to u64")
+    }
+
+    pub fn pointer_peek(&self, jumps: &[u64], size: u64) -> Result<Vec<u8>, &'static str> {
+        self.check_connected()?;
+        let mut command = format!("pointerPeek 0x{:X}", size);
+        for jump in jumps {
+            command = format!("{} 0x{:X}", command, jump);
+        }
+        self.send(command, true, false)?;
+        self.receive()
+    }
+
+    pub fn pointer_poke(&self, jumps: &[u64], data: PokeData) -> Result<(), &'static str> {
+        self.check_connected()?;
+        let mut command = format!("pointerPoke {}", data.to_string());
+        for jump in jumps {
+            command = format!("{} 0x{:X}", command, jump);
+        }
+        self.send(command, false, false)
+    }
+
+    pub fn freeze(&self, args: PokeArgs) -> Result<(), &'static str> {
+        self.check_connected()?;
+        let command = format!("freeze 0x{:X} {}", args.addr, args.data.to_string());
+        self.send(command, false, false)
+    }
+
+    pub fn unfreeze(&self, addr: u64) -> Result<(), &'static str> {
+        self.check_connected()?;
+        let command = format!("unFreeze 0x{:X}", addr);
+        self.send(command, false, false)
+    }
+
+    pub fn freeze_clear(&self) -> Result<(), &'static str> {
+        self.check_connected()?;
+        let command = "freezeClear".to_string();
+        self.send(command, false, false)
+    }
+
+    pub fn freeze_pause(&self) -> Result<(), &'static str> {
+        self.check_connected()?;
+        let command = "freezePause".to_string();
+        self.send(command, false, false)
+    }
+
+    pub fn freeze_unpause(&self) -> Result<(), &'static str> {
+        self.check_connected()?;
+        let command = "freezeUnpause".to_string();
+        self.send(command, false, false)
     }
 }
 

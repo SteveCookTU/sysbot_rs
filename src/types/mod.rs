@@ -1,4 +1,5 @@
 mod button;
+mod configure_option;
 mod peek_args;
 mod poke_args;
 mod poke_data;
@@ -8,6 +9,7 @@ mod stick_movement;
 pub mod thread_message;
 
 pub use button::*;
+pub use configure_option::*;
 pub use peek_args::*;
 pub use poke_args::*;
 pub use poke_data::*;
