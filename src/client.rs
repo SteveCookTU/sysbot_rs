@@ -115,11 +115,7 @@ impl SysBotClient {
             .chunks(2)
             .map(|chunk| {
                 if chunk.len() == 2 {
-                    u8::from_str_radix(
-                        &String::from_utf8_lossy(chunk),
-                        16,
-                    )
-                    .unwrap()
+                    u8::from_str_radix(&String::from_utf8_lossy(chunk), 16).unwrap()
                 } else {
                     0xa
                 }
@@ -277,11 +273,12 @@ impl SysBotClient {
         let command = "getSystemLanguage".to_string();
         self.send(command, true, false)?;
         let bytes = SysBotClient::hex_string_to_vec(self.receive()?);
-        Ok(i32::from_be_bytes(
-            (&bytes[0..(bytes.len() - 1)])
-                .try_into()
-                .map_err(|_| "Failed to parse bytes to i32")?,
-        ))
+        i32::from_str(
+            String::from_utf8(bytes)
+                .map_err(|_| "Failed to parse bytes to string")?
+                .trim(),
+        )
+        .map_err(|_| "Failed to parse string to i32")
     }
 
     pub fn get_main_nso_base(&self) -> Result<u64, &'static str> {
@@ -296,11 +293,16 @@ impl SysBotClient {
         ))
     }
 
-    pub fn get_build_id(&self) -> Result<Vec<u8>, &'static str> {
+    pub fn get_build_id(&self) -> Result<u64, &'static str> {
         self.check_connected()?;
         let command = "getBuildID".to_string();
         self.send(command, true, false)?;
-        Ok(SysBotClient::hex_string_to_vec(self.receive()?))
+        let bytes = SysBotClient::hex_string_to_vec(self.receive()?);
+        Ok(u64::from_be_bytes(
+            (&bytes[0..8])
+                .try_into()
+                .map_err(|_| "Failed to parse bytes to u64")?,
+        ))
     }
 
     pub fn get_heap_base(&self) -> Result<u64, &'static str> {
