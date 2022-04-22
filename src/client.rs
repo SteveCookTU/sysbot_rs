@@ -112,8 +112,18 @@ impl SysBotClient {
 
     fn hex_string_to_vec(string_bytes: Vec<u8>) -> Vec<u8> {
         string_bytes
-            .into_iter()
-            .map(|i| u8::from_str_radix(&char::from(i).to_string(), 16).unwrap())
+            .chunks(2)
+            .map(|chunk| {
+                if chunk.len() == 2 {
+                    u8::from_str_radix(
+                        &String::from_utf8_lossy(chunk),
+                        16,
+                    )
+                    .unwrap()
+                } else {
+                    0xa
+                }
+            })
             .collect::<Vec<_>>()
     }
 
@@ -254,10 +264,11 @@ impl SysBotClient {
         let command = "getTitleID".to_string();
         self.send(command, true, false)?;
         let bytes = SysBotClient::hex_string_to_vec(self.receive()?);
-        Ok(u64::from_le_bytes(
-            (&bytes[0..16])
+        println!("{:X?}", bytes);
+        Ok(u64::from_be_bytes(
+            (&bytes[0..8])
                 .try_into()
-                .map_err(|_| "Failed to parse bytes to u64")?,
+                .map_err(|_| "Failed to parse bytes to u32")?,
         ))
     }
 
@@ -266,7 +277,7 @@ impl SysBotClient {
         let command = "getSystemLanguage".to_string();
         self.send(command, true, false)?;
         let bytes = SysBotClient::hex_string_to_vec(self.receive()?);
-        Ok(i32::from_le_bytes(
+        Ok(i32::from_be_bytes(
             (&bytes[0..(bytes.len() - 1)])
                 .try_into()
                 .map_err(|_| "Failed to parse bytes to i32")?,
@@ -278,8 +289,8 @@ impl SysBotClient {
         let command = "getMainNsoBase".to_string();
         self.send(command, true, false)?;
         let bytes = SysBotClient::hex_string_to_vec(self.receive()?);
-        Ok(u64::from_le_bytes(
-            (&bytes[0..16])
+        Ok(u64::from_be_bytes(
+            (&bytes[0..8])
                 .try_into()
                 .map_err(|_| "Failed to parse bytes to u64")?,
         ))
@@ -297,8 +308,8 @@ impl SysBotClient {
         let command = "getHeapBase".to_string();
         self.send(command, true, false)?;
         let bytes = SysBotClient::hex_string_to_vec(self.receive()?);
-        Ok(u64::from_le_bytes(
-            (&bytes[0..16])
+        Ok(u64::from_be_bytes(
+            (&bytes[0..8])
                 .try_into()
                 .map_err(|_| "Failed to parse bytes to u64")?,
         ))
@@ -331,8 +342,8 @@ impl SysBotClient {
         }
         self.send(command, true, false)?;
         let bytes = SysBotClient::hex_string_to_vec(self.receive()?);
-        Ok(u64::from_le_bytes(
-            (&bytes[0..16])
+        Ok(u64::from_be_bytes(
+            (&bytes[0..8])
                 .try_into()
                 .map_err(|_| "Failed to parse bytes to u64")?,
         ))
@@ -346,8 +357,8 @@ impl SysBotClient {
         }
         self.send(command, true, false)?;
         let bytes = SysBotClient::hex_string_to_vec(self.receive()?);
-        Ok(u64::from_le_bytes(
-            (&bytes[0..16])
+        Ok(u64::from_be_bytes(
+            (&bytes[0..8])
                 .try_into()
                 .map_err(|_| "Failed to parse bytes to u64")?,
         ))
@@ -361,8 +372,8 @@ impl SysBotClient {
         }
         self.send(command, true, false)?;
         let bytes = SysBotClient::hex_string_to_vec(self.receive()?);
-        Ok(u64::from_le_bytes(
-            (&bytes[0..16])
+        Ok(u64::from_be_bytes(
+            (&bytes[0..8])
                 .try_into()
                 .map_err(|_| "Failed to parse bytes to u64")?,
         ))
