@@ -110,11 +110,18 @@ impl SysBotClient {
             .map_err(|_| "Failed to send command")
     }
 
+    fn hex_string_to_vec(string_bytes: Vec<u8>) -> Vec<u8> {
+        string_bytes
+            .into_iter()
+            .map(|i| u8::from_str_radix(&char::from(i).to_string(), 16).unwrap())
+            .collect::<Vec<_>>()
+    }
+
     pub fn peek(&self, args: PeekArgs) -> Result<Vec<u8>, &'static str> {
         self.check_connected()?;
         let command = format!("peek 0x{:X} 0x{:X}", args.addr, args.size);
         self.send(command, true, false)?;
-        self.receive()
+        Ok(SysBotClient::hex_string_to_vec(self.receive()?))
     }
 
     pub fn peek_multi(&self, args: Vec<PeekArgs>) -> Result<Vec<u8>, &'static str> {
@@ -126,14 +133,14 @@ impl SysBotClient {
             .join(" ");
         let command = format!("peekMulti {}", args);
         self.send(command, true, false)?;
-        self.receive()
+        Ok(SysBotClient::hex_string_to_vec(self.receive()?))
     }
 
     pub fn peek_absolute(&self, args: PeekArgs) -> Result<Vec<u8>, &'static str> {
         self.check_connected()?;
         let command = format!("peekAbsolute 0x{:X} 0x{:X}", args.addr, args.size);
         self.send(command, true, false)?;
-        self.receive()
+        Ok(SysBotClient::hex_string_to_vec(self.receive()?))
     }
 
     pub fn peek_absolute_multi(&self, args: Vec<PeekArgs>) -> Result<Vec<u8>, &'static str> {
@@ -145,14 +152,14 @@ impl SysBotClient {
             .join(" ");
         let command = format!("peekAbsoluteMulti {}", args);
         self.send(command, true, false)?;
-        self.receive()
+        Ok(SysBotClient::hex_string_to_vec(self.receive()?))
     }
 
     pub fn peek_main(&self, args: PeekArgs) -> Result<Vec<u8>, &'static str> {
         self.check_connected()?;
         let command = format!("peekMain 0x{:X} 0x{:X}", args.addr, args.size);
         self.send(command, true, false)?;
-        self.receive()
+        Ok(SysBotClient::hex_string_to_vec(self.receive()?))
     }
 
     pub fn peek_main_multi(&self, args: Vec<PeekArgs>) -> Result<Vec<u8>, &'static str> {
@@ -164,7 +171,7 @@ impl SysBotClient {
             .join(" ");
         let command = format!("peekMainMulti {}", args);
         self.send(command, true, false)?;
-        self.receive()
+        Ok(SysBotClient::hex_string_to_vec(self.receive()?))
     }
 
     pub fn poke(&self, args: PokeArgs) -> Result<(), &'static str> {
@@ -246,76 +253,55 @@ impl SysBotClient {
         self.check_connected()?;
         let command = "getTitleID".to_string();
         self.send(command, true, false)?;
-        let string_bytes = self.receive()?;
-        u64::from_str_radix(
-            String::from_utf8(string_bytes)
-                .map_err(|_| "Failed to parse response to string")?
-                .trim(),
-            16,
-        )
-        .map_err(|_| "Failed to parse input to u64")
+        let bytes = SysBotClient::hex_string_to_vec(self.receive()?);
+        Ok(u64::from_le_bytes(
+            (&bytes[0..])
+                .try_into()
+                .map_err(|_| "Failed to parse bytes to u64")?,
+        ))
     }
 
     pub fn get_system_language(&self) -> Result<i32, &'static str> {
         self.check_connected()?;
         let command = "getSystemLanguage".to_string();
         self.send(command, true, false)?;
-        let string_bytes = self.receive()?;
-        i32::from_str_radix(
-            String::from_utf8(string_bytes)
-                .map_err(|_| "Failed to parse response to string")?
-                .trim(),
-            16,
-        )
-        .map_err(|_| "Failed to parse input to u64")
+        let bytes = SysBotClient::hex_string_to_vec(self.receive()?);
+        Ok(i32::from_le_bytes(
+            (&bytes[0..])
+                .try_into()
+                .map_err(|_| "Failed to parse bytes to i32")?,
+        ))
     }
 
     pub fn get_main_nso_base(&self) -> Result<u64, &'static str> {
         self.check_connected()?;
         let command = "getMainNsoBase".to_string();
         self.send(command, true, false)?;
-        let string_bytes = self.receive()?;
-        u64::from_str_radix(
-            String::from_utf8(string_bytes)
-                .map_err(|_| "Failed to parse response to string")?
-                .trim(),
-            16,
-        )
-        .map_err(|_| "Failed to parse input to u64")
+        let bytes = SysBotClient::hex_string_to_vec(self.receive()?);
+        Ok(u64::from_le_bytes(
+            (&bytes[0..])
+                .try_into()
+                .map_err(|_| "Failed to parse bytes to u64")?,
+        ))
     }
 
     pub fn get_build_id(&self) -> Result<Vec<u8>, &'static str> {
         self.check_connected()?;
         let command = "getBuildID".to_string();
         self.send(command, true, false)?;
-        let string_bytes = self.receive()?;
-        Ok(string_bytes
-            .chunks(2)
-            .filter_map(|chunk| {
-                if chunk.len() < 2 {
-                    None
-                } else {
-                    Some(
-                        u8::from_str_radix(String::from_utf8(chunk.to_vec()).unwrap().trim(), 16)
-                            .unwrap(),
-                    )
-                }
-            })
-            .collect::<Vec<u8>>())
+        Ok(SysBotClient::hex_string_to_vec(self.receive()?))
     }
 
     pub fn get_heap_base(&self) -> Result<u64, &'static str> {
         self.check_connected()?;
         let command = "getHeapBase".to_string();
         self.send(command, true, false)?;
-        let string_bytes = self.receive()?;
-        u64::from_str_radix(
-            String::from_utf8(string_bytes)
-                .map_err(|_| "Failed to parse response to string")?
-                .trim(),
-            16,
-        )
-        .map_err(|_| "Failed to parse input to u64")
+        let bytes = SysBotClient::hex_string_to_vec(self.receive()?);
+        Ok(u64::from_le_bytes(
+            (&bytes[0..])
+                .try_into()
+                .map_err(|_| "Failed to parse bytes to u64")?,
+        ))
     }
 
     pub fn is_program_running(&self) -> Result<bool, &'static str> {
@@ -344,14 +330,12 @@ impl SysBotClient {
             command = format!("{} 0x{:X}", command, jump)
         }
         self.send(command, true, false)?;
-        let string_bytes = self.receive()?;
-        u64::from_str_radix(
-            String::from_utf8(string_bytes)
-                .map_err(|_| "Failed to parse response to string")?
-                .trim(),
-            16,
-        )
-        .map_err(|_| "Failed to parse input to u64")
+        let bytes = SysBotClient::hex_string_to_vec(self.receive()?);
+        Ok(u64::from_le_bytes(
+            (&bytes[0..])
+                .try_into()
+                .map_err(|_| "Failed to parse bytes to u64")?,
+        ))
     }
 
     pub fn pointer_all(&self, jumps: &[u64]) -> Result<u64, &'static str> {
@@ -361,14 +345,12 @@ impl SysBotClient {
             command = format!("{} 0x{:X}", command, jump)
         }
         self.send(command, true, false)?;
-        let string_bytes = self.receive()?;
-        u64::from_str_radix(
-            String::from_utf8(string_bytes)
-                .map_err(|_| "Failed to parse response to string")?
-                .trim(),
-            16,
-        )
-        .map_err(|_| "Failed to parse input to u64")
+        let bytes = SysBotClient::hex_string_to_vec(self.receive()?);
+        Ok(u64::from_le_bytes(
+            (&bytes[0..])
+                .try_into()
+                .map_err(|_| "Failed to parse bytes to u64")?,
+        ))
     }
 
     pub fn pointer_relative(&self, jumps: &[u64]) -> Result<u64, &'static str> {
@@ -378,14 +360,12 @@ impl SysBotClient {
             command = format!("{} 0x{:X}", command, jump)
         }
         self.send(command, true, false)?;
-        let string_bytes = self.receive()?;
-        u64::from_str_radix(
-            String::from_utf8(string_bytes)
-                .map_err(|_| "Failed to parse response to string")?
-                .trim(),
-            16,
-        )
-        .map_err(|_| "Failed to parse input to u64")
+        let bytes = SysBotClient::hex_string_to_vec(self.receive()?);
+        Ok(u64::from_le_bytes(
+            (&bytes[0..])
+                .try_into()
+                .map_err(|_| "Failed to parse bytes to u64")?,
+        ))
     }
 
     pub fn pointer_peek(&self, jumps: &[u64], size: u64) -> Result<Vec<u8>, &'static str> {
@@ -395,7 +375,7 @@ impl SysBotClient {
             command = format!("{} 0x{:X}", command, jump);
         }
         self.send(command, true, false)?;
-        self.receive()
+        Ok(SysBotClient::hex_string_to_vec(self.receive()?))
     }
 
     pub fn pointer_poke(&self, jumps: &[u64], data: PokeData) -> Result<(), &'static str> {
