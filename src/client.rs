@@ -66,7 +66,7 @@ impl SysBotClient {
                     tcp_stream.flush().expect("Failed to flush stream");
 
                     if message.returns {
-                        let mut buf = Vec::with_capacity(message.size);
+                        let mut buf = vec![0u8; message.size];
                         tcp_stream
                             .read_exact(&mut buf)
                             .expect("Failed to read from stream");
@@ -116,7 +116,7 @@ impl SysBotClient {
             .chunks(2)
             .map(|chunk| {
                 if chunk.len() == 2 {
-                    u8::from_str_radix(&String::from_utf8_lossy(chunk), 16).unwrap()
+                    u8::from_str_radix(&String::from_utf8_lossy(chunk), 16).map_err(|_| println!("{:?}", chunk)).unwrap()
                 } else {
                     0xa
                 }
@@ -127,7 +127,7 @@ impl SysBotClient {
     pub fn peek(&self, args: PeekArgs) -> Result<Vec<u8>, &'static str> {
         self.check_connected()?;
         let command = format!("peek 0x{:X} 0x{:X}", args.addr, args.size);
-        self.send(command, true, false, args.size)?;
+        self.send(command, true, false, args.size * 2 + 1)?;
         Ok(SysBotClient::hex_string_to_vec(self.receive()?))
     }
 
@@ -140,14 +140,14 @@ impl SysBotClient {
             .collect::<Vec<String>>()
             .join(" ");
         let command = format!("peekMulti {}", args);
-        self.send(command, true, false, total_size)?;
+        self.send(command, true, false, total_size * 2 + 1)?;
         Ok(SysBotClient::hex_string_to_vec(self.receive()?))
     }
 
     pub fn peek_absolute(&self, args: PeekArgs) -> Result<Vec<u8>, &'static str> {
         self.check_connected()?;
         let command = format!("peekAbsolute 0x{:X} 0x{:X}", args.addr, args.size);
-        self.send(command, true, false, args.size)?;
+        self.send(command, true, false, args.size * 2 + 1)?;
         Ok(SysBotClient::hex_string_to_vec(self.receive()?))
     }
 
@@ -160,14 +160,14 @@ impl SysBotClient {
             .collect::<Vec<String>>()
             .join(" ");
         let command = format!("peekAbsoluteMulti {}", args);
-        self.send(command, true, false, total_size)?;
+        self.send(command, true, false, total_size * 2 + 1)?;
         Ok(SysBotClient::hex_string_to_vec(self.receive()?))
     }
 
     pub fn peek_main(&self, args: PeekArgs) -> Result<Vec<u8>, &'static str> {
         self.check_connected()?;
         let command = format!("peekMain 0x{:X} 0x{:X}", args.addr, args.size);
-        self.send(command, true, false, args.size)?;
+        self.send(command, true, false, args.size * 2 + 1)?;
         Ok(SysBotClient::hex_string_to_vec(self.receive()?))
     }
 
@@ -180,7 +180,7 @@ impl SysBotClient {
             .collect::<Vec<String>>()
             .join(" ");
         let command = format!("peekMainMulti {}", args);
-        self.send(command, true, false, total_size)?;
+        self.send(command, true, false, total_size * 2 + 1)?;
         Ok(SysBotClient::hex_string_to_vec(self.receive()?))
     }
 
@@ -262,7 +262,7 @@ impl SysBotClient {
     pub fn get_title_id(&self) -> Result<u64, &'static str> {
         self.check_connected()?;
         let command = "getTitleID".to_string();
-        self.send(command, true, false, 9)?;
+        self.send(command, true, false, 17)?;
         let bytes = SysBotClient::hex_string_to_vec(self.receive()?);
         println!("{:X?}", bytes);
         Ok(u64::from_be_bytes(
@@ -288,7 +288,7 @@ impl SysBotClient {
     pub fn get_main_nso_base(&self) -> Result<u64, &'static str> {
         self.check_connected()?;
         let command = "getMainNsoBase".to_string();
-        self.send(command, true, false, 9)?;
+        self.send(command, true, false, 17)?;
         let bytes = SysBotClient::hex_string_to_vec(self.receive()?);
         Ok(u64::from_be_bytes(
             (&bytes[0..8])
@@ -300,7 +300,7 @@ impl SysBotClient {
     pub fn get_build_id(&self) -> Result<u64, &'static str> {
         self.check_connected()?;
         let command = "getBuildID".to_string();
-        self.send(command, true, false, 9)?;
+        self.send(command, true, false, 17)?;
         let bytes = SysBotClient::hex_string_to_vec(self.receive()?);
         Ok(u64::from_be_bytes(
             (&bytes[0..8])
@@ -312,7 +312,7 @@ impl SysBotClient {
     pub fn get_heap_base(&self) -> Result<u64, &'static str> {
         self.check_connected()?;
         let command = "getHeapBase".to_string();
-        self.send(command, true, false, 9)?;
+        self.send(command, true, false, 17)?;
         let bytes = SysBotClient::hex_string_to_vec(self.receive()?);
         Ok(u64::from_be_bytes(
             (&bytes[0..8])
@@ -346,7 +346,7 @@ impl SysBotClient {
         for jump in jumps {
             command = format!("{} 0x{:X}", command, jump)
         }
-        self.send(command, true, false, 9)?;
+        self.send(command, true, false, 17)?;
         let bytes = SysBotClient::hex_string_to_vec(self.receive()?);
         Ok(u64::from_be_bytes(
             (&bytes[0..8])
@@ -361,7 +361,7 @@ impl SysBotClient {
         for jump in jumps {
             command = format!("{} 0x{:X}", command, jump)
         }
-        self.send(command, true, false, 9)?;
+        self.send(command, true, false, 17)?;
         let bytes = SysBotClient::hex_string_to_vec(self.receive()?);
         Ok(u64::from_be_bytes(
             (&bytes[0..8])
@@ -376,7 +376,7 @@ impl SysBotClient {
         for jump in jumps {
             command = format!("{} 0x{:X}", command, jump)
         }
-        self.send(command, true, false, 9)?;
+        self.send(command, true, false, 17)?;
         let bytes = SysBotClient::hex_string_to_vec(self.receive()?);
         Ok(u64::from_be_bytes(
             (&bytes[0..8])
@@ -391,7 +391,7 @@ impl SysBotClient {
         for jump in jumps {
             command = format!("{} 0x{:X}", command, jump);
         }
-        self.send(command, true, false, size)?;
+        self.send(command, true, false, size * 2 + 1)?;
         Ok(SysBotClient::hex_string_to_vec(self.receive()?))
     }
 
