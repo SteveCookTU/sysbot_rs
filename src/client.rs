@@ -66,7 +66,7 @@ impl SysBotClient {
                     tcp_stream.flush().expect("Failed to flush stream");
 
                     if message.returns {
-                        let mut buf = [0u8; 10000];
+                        let mut buf = [0u8; 100000];
                         let size = tcp_stream
                             .read(&mut buf)
                             .expect("Failed to read from stream");
