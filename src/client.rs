@@ -66,14 +66,26 @@ impl SysBotClient {
                     tcp_stream.flush().expect("Failed to flush stream");
 
                     if message.returns {
-                        let mut buf = vec![0u8; message.size];
-                        tcp_stream
-                            .read_exact(&mut buf)
-                            .expect("Failed to read from stream");
-                        sender_out
-                            .clone()
-                            .send(buf)
-                            .expect("Failed to send response over channel");
+                        if message.size == 0 {
+                            let mut buf = vec![0; 100];
+                            tcp_stream
+                                .read(&mut buf)
+                                .expect("Failed to read from stream");
+                            sender_out
+                                .clone()
+                                .send(buf)
+                                .expect("Failed to send response over channel");
+                        } else {
+                            let mut buf = vec![0u8; message.size];
+                            tcp_stream
+                                .read_exact(&mut buf)
+                                .expect("Failed to read from stream");
+                            sender_out
+                                .clone()
+                                .send(buf)
+                                .expect("Failed to send response over channel");
+                        }
+
                     }
                 }
             }
@@ -272,17 +284,16 @@ impl SysBotClient {
         ))
     }
 
-    pub fn get_system_language(&self) -> Result<i32, &'static str> {
+    pub fn get_system_language(&self) -> Result<u8, &'static str> {
         self.check_connected()?;
         let command = "getSystemLanguage".to_string();
         self.send(command, true, false, 0)?;
-        let bytes = SysBotClient::hex_string_to_vec(self.receive()?);
-        i32::from_str(
-            String::from_utf8(bytes)
-                .map_err(|_| "Failed to parse bytes to string")?
-                .trim(),
+        let string = String::from_utf8(self.receive()?).unwrap();
+        let string = string.replace('\u{0000}', "");
+        u8::from_str(
+            string.trim(),
         )
-        .map_err(|_| "Failed to parse string to i32")
+        .map_err(|_| "Failed to parse string to u8")
     }
 
     pub fn get_main_nso_base(&self) -> Result<u64, &'static str> {
