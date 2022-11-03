@@ -51,7 +51,7 @@ impl SysBotClient {
         let (sender_in, receiver_in): (SyncSender<ThreadMessage>, Receiver<ThreadMessage>) =
             mpsc::sync_channel(0);
         let (sender_out, receiver_out): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = mpsc::channel();
-        let tcp_stream = TcpStream::connect(socket_addr).expect("Failed to connect to address");
+        let tcp_stream = TcpStream::connect(socket_addr).map_err(|_| "Failed to connect to TcpStream")?;
         let worker = Some(thread::spawn(move || {
             let mut tcp_stream = tcp_stream;
             let sender_out = sender_out;
