@@ -51,9 +51,9 @@ impl SysBotClient {
         let (sender_in, receiver_in): (SyncSender<ThreadMessage>, Receiver<ThreadMessage>) =
             mpsc::sync_channel(0);
         let (sender_out, receiver_out): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = mpsc::channel();
+        let tcp_stream = TcpStream::connect(socket_addr).expect("Failed to connect to address");
         let worker = Some(thread::spawn(move || {
-            let mut tcp_stream =
-                TcpStream::connect(socket_addr).expect("Failed to connect to address");
+            let mut tcp_stream = tcp_stream;
             let sender_out = sender_out;
             let receiver_in = receiver_in;
             for message in receiver_in.iter() {
@@ -85,7 +85,6 @@ impl SysBotClient {
                                 .send(buf)
                                 .expect("Failed to send response over channel");
                         }
-
                     }
                 }
             }
@@ -112,13 +111,19 @@ impl SysBotClient {
         }
     }
 
-    fn send(&self, command: String, returns: bool, close: bool, size: usize) -> Result<(), &'static str> {
+    fn send(
+        &self,
+        command: String,
+        returns: bool,
+        close: bool,
+        size: usize,
+    ) -> Result<(), &'static str> {
         self.sender
             .send(ThreadMessage {
                 message: command + "\r\n",
                 returns,
                 close,
-                size
+                size,
             })
             .map_err(|_| "Failed to send command")
     }
@@ -128,7 +133,9 @@ impl SysBotClient {
             .chunks(2)
             .map(|chunk| {
                 if chunk.len() == 2 {
-                    u8::from_str_radix(&String::from_utf8_lossy(chunk), 16).map_err(|_| println!("{:?}", chunk)).unwrap()
+                    u8::from_str_radix(&String::from_utf8_lossy(chunk), 16)
+                        .map_err(|_| println!("{:?}", chunk))
+                        .unwrap()
                 } else {
                     0xa
                 }
@@ -148,7 +155,10 @@ impl SysBotClient {
         let mut total_size = 0;
         let args = args
             .into_iter()
-            .map(|a| { total_size += a.size; format!("0x{:X} 0x{:X}", a.addr, a.size) })
+            .map(|a| {
+                total_size += a.size;
+                format!("0x{:X} 0x{:X}", a.addr, a.size)
+            })
             .collect::<Vec<String>>()
             .join(" ");
         let command = format!("peekMulti {}", args);
@@ -168,7 +178,10 @@ impl SysBotClient {
         let mut total_size = 0;
         let args = args
             .into_iter()
-            .map(|a| { total_size += a.size; format!("0x{:X} 0x{:X}", a.addr, a.size) })
+            .map(|a| {
+                total_size += a.size;
+                format!("0x{:X} 0x{:X}", a.addr, a.size)
+            })
             .collect::<Vec<String>>()
             .join(" ");
         let command = format!("peekAbsoluteMulti {}", args);
@@ -188,7 +201,10 @@ impl SysBotClient {
         let mut total_size = 0;
         let args = args
             .into_iter()
-            .map(|a| { total_size += a.size; format!("0x{:X} 0x{:X}", a.addr, a.size) })
+            .map(|a| {
+                total_size += a.size;
+                format!("0x{:X} 0x{:X}", a.addr, a.size)
+            })
             .collect::<Vec<String>>()
             .join(" ");
         let command = format!("peekMainMulti {}", args);
@@ -276,7 +292,6 @@ impl SysBotClient {
         let command = "getTitleID".to_string();
         self.send(command, true, false, 17)?;
         let bytes = SysBotClient::hex_string_to_vec(self.receive()?);
-        println!("{:X?}", bytes);
         Ok(u64::from_be_bytes(
             (&bytes[0..8])
                 .try_into()
@@ -290,10 +305,7 @@ impl SysBotClient {
         self.send(command, true, false, 0)?;
         let string = String::from_utf8(self.receive()?).unwrap();
         let string = string.replace('\u{0000}', "");
-        u8::from_str(
-            string.trim(),
-        )
-        .map_err(|_| "Failed to parse string to u8")
+        u8::from_str(string.trim()).map_err(|_| "Failed to parse string to u8")
     }
 
     pub fn get_main_nso_base(&self) -> Result<u64, &'static str> {
