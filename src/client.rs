@@ -9,6 +9,7 @@ use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender, SyncSender};
 use std::thread;
 use std::thread::JoinHandle;
+use std::time::Duration;
 
 /// A client that sends and receives data from a sys-botbase server
 ///
@@ -51,7 +52,7 @@ impl SysBotClient {
         let (sender_in, receiver_in): (SyncSender<ThreadMessage>, Receiver<ThreadMessage>) =
             mpsc::sync_channel(0);
         let (sender_out, receiver_out): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = mpsc::channel();
-        let tcp_stream = TcpStream::connect(socket_addr).map_err(|_| "Failed to connect to TcpStream")?;
+        let tcp_stream = TcpStream::connect_timeout(&socket_addr, Duration::from_secs(5)).map_err(|_| "Failed to connect to TcpStream")?;
         let worker = Some(thread::spawn(move || {
             let mut tcp_stream = tcp_stream;
             let sender_out = sender_out;
