@@ -14,7 +14,7 @@ impl ToString for PokeData {
         let mut string = String::with_capacity(self.data.len() + 2);
         string += "0x";
         for datum in &self.data {
-            string += &format!("{:0<2X}", datum);
+            string += &format!("{:0>2X}", datum);
         }
         string
     }
